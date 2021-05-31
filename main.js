@@ -111,7 +111,7 @@ const Crawler = (() => {
 							const scheduleList = await getSchedule(id, scheduleDate);
 							console.log(`${groupArea}  ${groupStreet}  ${organizeName}\t${scheduleDate} 有排班`.inverse);
 							// 查询到有可预约就立即调用企业微信发送消息
-							const availableList = scheduleList.filter(e => e.count > 0);
+							const availableList = scheduleList.filter(e => e.count > 4);
 							if (availableList.length) {
 								console.log(`\t可预约的疫苗 ${availableList.length} 剂`.rainbow);
 								const scheduleInfo = {
@@ -206,7 +206,7 @@ const Crawler = (() => {
 
 // =========================== 企业微信机器人 START ===========================
 const WechatRobot = (() => {
-  const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部
+  const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部 (个人测试用)
 
 	function sendMarkdownMsg(content) {
 		return httpRequest(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${ROBOT_KEY}`, {
@@ -233,8 +233,8 @@ const WechatRobot = (() => {
 
 
 // =========================== 程序入口 ===========================
-// 每5分钟爬一次
-schedule.scheduleJob('* */5 * * * *', function(fireDate) {
+// 每10分钟爬一次
+schedule.scheduleJob('* */10 * * * *', function(fireDate) {
 	console.log(`========== 执行查询时间：${fireDate.toLocaleTimeString()} ==========`);
 	Crawler.run()
 		.then((res) => {
@@ -269,48 +269,3 @@ function notify(scheduleInfo) {
 			}
 		});
 }
-
-
-
-// 测试数据
-/*
-const test = [ { beginTimeStr: '08:00:00',
-       count: 0,
-       endTimeStr: '09:00:00',
-       scheduleID: 'a592cb24bd084f7a863f9d932c9e49ed1622454235802',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' },
-     { beginTimeStr: '09:00:00',
-       count: 0,
-       endTimeStr: '10:00:00',
-       scheduleID: '2174e8f3aed148b282cbce61bbc78f1b1622454266315',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' },
-     { beginTimeStr: '10:00:00',
-       count: 0,
-       endTimeStr: '11:00:00',
-       scheduleID: '17b5b3b7332a4ea3bf2e15742af162d61622454295505',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' },
-     { beginTimeStr: '14:30:00',
-       count: 0,
-       endTimeStr: '15:30:00',
-       scheduleID: '9b4ace3657734996afcbcab5fe91960e1622454334773',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' },
-     { beginTimeStr: '15:30:00',
-       count: 0,
-       endTimeStr: '16:30:00',
-       scheduleID: '5fc72e6c180c4027b0e79cb576085af51622454379912',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' },
-     { beginTimeStr: '16:30:00',
-       count: 0,
-       endTimeStr: '17:00:00',
-       scheduleID: '9029534a69454cd68f614ac8cc3ceca61622454439007',
-       vaccineProducer: '北京生物（含长春、兰州和成都）#当天新冠疫苗接种仅受理接种第一针及间隔期满42天以上的第二针。' } ];
-const info = {
-	groupArea: '禅城区',
-	groupStreet: '张槎街道',
-	organizeName: '张槎街道新冠疫苗大型临时接种点（高新区拓思未来企业孵化中心)',
-	scheduleDate: '2021-05-31',
-	scheduleList: test,
-};
-
-notify(info);
-*/
