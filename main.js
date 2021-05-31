@@ -57,19 +57,21 @@ const Crawler = (() => {
 	}
 
 	// 根据区域，街道获取接种点
-	function getOrganizeByAreaStreet(groupArea, groupStreet) {
+	function getOrganizeByAreaStreet(area, street) {
 		return new Promise((resolve, reject) => {
 			httpRequest(getOrganizeByGroupArea,
 				{
 		  		params: {
-			    	groupArea,
-			    	groupStreet,
+			    	groupArea: area,
+			    	groupStreet: street,
 		    	},
 		  	})
 			.then(res => {
-				if (res.ResCode !== '100') return reject(res.ResMsg);
-				const organizeList = res.entityList.map(e => ({ ...e, groupArea, groupStreet }));
-				return resolve(organizeList);
+				if (res.ResCode === '100') {
+					const organizeList = res.entityList.map(e => ({ ...e, area, street }));
+					return resolve(organizeList);
+				}
+				return reject(res.ResMsg);
 			})
 			.catch();
 		});
@@ -95,28 +97,29 @@ const Crawler = (() => {
 	// 运行
 	async function run() {
 		const areaStreet = getAreaStreet();
-		for (let { groupArea: area, groupStreet: street } of areaStreet) {
+		for (let { groupArea, groupStreet } of areaStreet) {
 			// 每次休眠一会儿
-			await sleep(1000);
+			await sleep(2000);
 			try {
-				const organizeList = await getOrganizeByAreaStreet(area, street);
+				const organizeList = await getOrganizeByAreaStreet(groupArea, groupStreet);
 				// 获取指定区域的指定街道下的接种点
 				// console.log(`${groupArea} ${groupStreet} `, organizeList);
 				// 遍历 区域 -> 街道 -> 接种点是否有可预约的数据
-				for (let { id, groupArea, groupStreet, organizeName } of organizeList) {
+				for (let { id, area, street, organizeName } of organizeList) {
+					await sleep(1500);
 					// 最近一周
 					for (let scheduleDate of recentlyDate()) {
-						await sleep(1000);
+						await sleep(2000);
 						try {
 							const scheduleList = await getSchedule(id, scheduleDate);
-							console.log(`${groupArea}  ${groupStreet}  ${organizeName}\t${scheduleDate} 有排班`.inverse);
+							console.log(`${area}  ${street}  ${organizeName}\t${scheduleDate} 有 ${('' + scheduleList.length).white} 个排班`.inverse);
 							// 查询到有可预约就立即调用企业微信发送消息
 							const availableList = scheduleList.filter(e => e.count > 4);
 							if (availableList.length) {
 								console.log(`\t可预约的疫苗 ${availableList.length} 剂`.rainbow);
 								const scheduleInfo = {
-									groupArea,
-									groupStreet,
+									area,
+									street,
 									organizeName,
 									scheduleDate,
 									scheduleList: availableList,
@@ -124,28 +127,28 @@ const Crawler = (() => {
 								notify(scheduleInfo);
 							}
 						} catch(e) {
-							console.log(`${groupArea}  ${groupStreet}  ${organizeName}\t${scheduleDate}\t`, e.red);
+							console.log(`${area}  ${street}  ${organizeName}\t${scheduleDate}\t`, e.red);
 						}
 					}
 				}
 			} catch(e) {
-				console.log(`${area}  ${street}\t`, e.red);
+				console.log(`${groupArea}  ${groupStreet}\t`, e.red);
+				console.trace();
 			}
 		}
-		console.log('========= DONE ==========');
 	}
 
 	// 打印机构信息
-	function printOrganize({
-		id, // 疫苗接种点机构ID
-		organizeName, // 疫苗接种点名称
-		showFlag, // 是否有号： 0(无)
-		groupArea,
-		groupStreet,
-	}) {
-		const showFlagLabel = showFlag === '0' ? '无号' : '有号';
-	  console.log(`${groupArea} - ${groupStreet} - ${organizeName} ${showFlagLabel}`);
-	}
+	// function printOrganize({
+	// 	id, // 疫苗接种点机构ID
+	// 	organizeName, // 疫苗接种点名称
+	// 	showFlag, // 是否有号： 0(无)
+	// 	groupArea,
+	// 	groupStreet,
+	// }) {
+	// 	const showFlagLabel = showFlag === '0' ? '无号' : '有号';
+	//   console.log(`${groupArea} - ${groupStreet} - ${organizeName} ${showFlagLabel}`);
+	// }
 
 	// 未来几天日期
 	function recentlyDate(fetureDays = 6) {
@@ -166,28 +169,28 @@ const Crawler = (() => {
 	}
 
 	// 获取排班详情
-	function getScheduleFull({
-		id,
-  	groupArea,
-  	groupStreet,
-	}) {
-		httpRequest(getScheduleFullForShow, {
-			params: {
-				baseOrganizeID: id,
-				date: recentlyDate(1).join(',')
-			}
-		})
-			.then(res => {
-				if (res.ResCode === '100') {
-					console.log(`${groupArea} - ${groupStreet} 有排班`);	
-				} else {
-					console.log(`${groupArea} - ${groupStreet} 排班异常`, res);
-				}
-			})
-			.catch(err => {
-				console.log('获取排班出现异常', err);
-			});
-	}
+	// function getScheduleFull({
+	// 	id,
+ //  	groupArea,
+ //  	groupStreet,
+	// }) {
+	// 	httpRequest(getScheduleFullForShow, {
+	// 		params: {
+	// 			baseOrganizeID: id,
+	// 			date: recentlyDate(1).join(',')
+	// 		}
+	// 	})
+	// 		.then(res => {
+	// 			if (res.ResCode === '100') {
+	// 				console.log(`${groupArea} - ${groupStreet} 有排班`);	
+	// 			} else {
+	// 				console.log(`${groupArea} - ${groupStreet} 排班异常`, res);
+	// 			}
+	// 		})
+	// 		.catch(err => {
+	// 			console.log('获取排班出现异常', err);
+	// 		});
+	// }
 
 	return {
 		run,
@@ -233,8 +236,8 @@ const WechatRobot = (() => {
 
 
 // =========================== 程序入口 ===========================
-// 每10分钟爬一次
-schedule.scheduleJob('* */10 * * * *', function(fireDate) {
+// 每15分钟爬一次
+schedule.scheduleJob('* */15 * * * *', function(fireDate) {
 	console.log(`========== 执行查询时间：${fireDate.toLocaleTimeString()} ==========`);
 	Crawler.run()
 		.then((res) => {
@@ -247,8 +250,8 @@ schedule.scheduleJob('* */10 * * * *', function(fireDate) {
 // 通知
 function notify(scheduleInfo) {
 	const {
-		groupArea,
-		groupStreet,
+		area,
+		street,
 		organizeName,
 		scheduleDate,
 		scheduleList,
@@ -260,7 +263,7 @@ function notify(scheduleInfo) {
 			endTimeStr,
 			count,
 			vaccineProducer,
-		}) => `><font color=\"warning\">${groupArea} - ${groupStreet}\n${organizeName}</font>\n时间：${scheduleDate} ${beginTimeStr} - ${endTimeStr}\n剩余<font color=\"info\"> **${count}** </font>剂疫苗`)
+		}) => `><font color=\"warning\">${area} - ${street}\n${organizeName}</font>\n时间：${scheduleDate} ${beginTimeStr} - ${endTimeStr}\n剩余<font color=\"info\"> **${count}** </font>剂疫苗`)
 	  .join('\n>\n');
 	WechatRobot.sendMarkdownMsg(`公众号：[魅力北滘](https://fsservice.wjj.foshan.gov.cn/fw/content/wxOrder/index.html?state=ch5#/appoint/organizationlist?bookType=personal) 有疫苗可以预约啦。\n${content}\n\n\n<font color=\"comment\">机不可失，赶快去公众号看看吧!</font>`)
 		.then(res => {
