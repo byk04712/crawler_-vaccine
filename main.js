@@ -206,9 +206,7 @@ const Crawler = (() => {
 
 // =========================== 企业微信机器人 START ===========================
 const WechatRobot = (() => {
-	const ROBOT_KEY = '09c9fed7-faa7-4e1f-a909-475b3127d89d'; // 业务中台开发测试沟通群
-	// const ROBOT_KEY = '668191e4-43be-43b9-b791-edd7ae1b2278'; // 追梦赤子心 - 全员群
-  // const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部
+  const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部
 
 	function sendMarkdownMsg(content) {
 		return httpRequest(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${ROBOT_KEY}`, {
