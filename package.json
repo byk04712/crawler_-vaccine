@@ -10,7 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "colors": "^1.4.0",
     "node-fetch": "^2.6.1",
-    "node-notifier": "^10.0.0"
+    "node-schedule": "^2.0.0"
   }
 }
