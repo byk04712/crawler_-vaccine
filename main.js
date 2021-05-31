@@ -110,14 +110,16 @@ const Crawler = (() => {
 						try {
 							const scheduleList = await getSchedule(id, scheduleDate);
 							console.log(`${groupArea}  ${groupStreet}  ${organizeName}\t${scheduleDate} 有排班`.inverse);
-							// 查询到有预约就立即调用企业微信发送消息
-							if (scheduleList.length) {
+							// 查询到有可预约就立即调用企业微信发送消息
+							const availableList = scheduleList.filter(e => e.count > 0);
+							if (availableList.length) {
+								console.log(`\t可预约的疫苗 ${availableList.length} 剂`.rainbow);
 								const scheduleInfo = {
 									groupArea,
 									groupStreet,
 									organizeName,
 									scheduleDate,
-									scheduleList,
+									scheduleList: availableList,
 								};
 								notify(scheduleInfo);
 							}
@@ -204,7 +206,8 @@ const Crawler = (() => {
 
 // =========================== 企业微信机器人 START ===========================
 const WechatRobot = (() => {
-	const ROBOT_KEY = '668191e4-43be-43b9-b791-edd7ae1b2278'; // 追梦赤子心 - 全员群
+	const ROBOT_KEY = '09c9fed7-faa7-4e1f-a909-475b3127d89d'; // 业务中台开发测试沟通群
+	// const ROBOT_KEY = '668191e4-43be-43b9-b791-edd7ae1b2278'; // 追梦赤子心 - 全员群
   // const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部
 
 	function sendMarkdownMsg(content) {
@@ -232,15 +235,14 @@ const WechatRobot = (() => {
 
 
 // =========================== 程序入口 ===========================
-// 每10分钟爬一次
-// schedule.scheduleJob('*/3 * * * * *', function(fireDate) {
-	// console.log(`========== 执行查询时间：${fireDate.toLocaleTimeString()} ==========`);
+// 每5分钟爬一次
+schedule.scheduleJob('* */5 * * * *', function(fireDate) {
+	console.log(`========== 执行查询时间：${fireDate.toLocaleTimeString()} ==========`);
 	Crawler.run()
 		.then((res) => {
 			console.log(`============== 本次查询任务完成 ==============\n`, res);
 		});
-// });
-
+});
 
 
 
@@ -260,7 +262,7 @@ function notify(scheduleInfo) {
 			endTimeStr,
 			count,
 			vaccineProducer,
-		}) => `><font color=\"warning\">${groupArea} - ${groupStreet}\n${organizeName}</font>\n时间：${beginTimeStr} - ${endTimeStr}\n剩余<font color=\"info\"> **${count}** </font>剂疫苗`)
+		}) => `><font color=\"warning\">${groupArea} - ${groupStreet}\n${organizeName}</font>\n时间：${scheduleDate} ${beginTimeStr} - ${endTimeStr}\n剩余<font color=\"info\"> **${count}** </font>剂疫苗`)
 	  .join('\n>\n');
 	WechatRobot.sendMarkdownMsg(`公众号：[魅力北滘](https://fsservice.wjj.foshan.gov.cn/fw/content/wxOrder/index.html?state=ch5#/appoint/organizationlist?bookType=personal) 有疫苗可以预约啦。\n${content}\n\n\n<font color=\"comment\">机不可失，赶快去公众号看看吧!</font>`)
 		.then(res => {
