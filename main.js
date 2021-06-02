@@ -36,7 +36,7 @@ const Crawler = (() => {
 	// 根据区域街道获取疫苗信息
 	const getOrganizeByGroupArea = 'https://fsservice.wjj.foshan.gov.cn/fw2/foying/wechatpublic/wx/userBooking/getOrganizeByGroupArea'
 	// 根据医院机构id，日期时间 获取疫苗排班列表
-	const getScheduleFullForShow = 'https://fsservice.wjj.foshan.gov.cn/fw2/foying/wechatpublic/wx/userBooking/getScheduleFullForShow'
+	// const getScheduleFullForShow = 'https://fsservice.wjj.foshan.gov.cn/fw2/foying/wechatpublic/wx/userBooking/getScheduleFullForShow'
 	// 根据医院机构id，日期时间 获取疫苗接种时间节点
 	const getScheduleByDate = 'https://fsservice.wjj.foshan.gov.cn/fw2/foying/wechatpublic/wx/userBooking/getScheduleByDate';
 	// 睡眠
@@ -112,11 +112,10 @@ const Crawler = (() => {
 						await sleep(2000);
 						try {
 							const scheduleList = await getSchedule(id, scheduleDate);
-							console.log(`${area}  ${street}  ${organizeName}\t${scheduleDate} 有 ${('' + scheduleList.length).white} 个排班`.inverse);
 							// 查询到有可预约就立即调用企业微信发送消息
-							const availableList = scheduleList.filter(e => e.count > 4);
+							const availableList = scheduleList.filter(e => e.count > 4); // 过滤下，大于 n 剂时才提示。
+							console.log(`${area}  ${street}  ${organizeName}\t${scheduleDate} 有 ${String(` ${scheduleList.length} `).inverse} 个排班 \t可预约的疫苗 ${String(` ${availableList.length} `).inverse} 剂`);
 							if (availableList.length) {
-								console.log(`\t可预约的疫苗 ${availableList.length} 剂`.rainbow);
 								const scheduleInfo = {
 									area,
 									street,
@@ -132,23 +131,11 @@ const Crawler = (() => {
 					}
 				}
 			} catch(e) {
+				// 查询不到机构列表
 				console.log(`${groupArea}  ${groupStreet}\t`, e.red);
-				console.trace();
 			}
 		}
 	}
-
-	// 打印机构信息
-	// function printOrganize({
-	// 	id, // 疫苗接种点机构ID
-	// 	organizeName, // 疫苗接种点名称
-	// 	showFlag, // 是否有号： 0(无)
-	// 	groupArea,
-	// 	groupStreet,
-	// }) {
-	// 	const showFlagLabel = showFlag === '0' ? '无号' : '有号';
-	//   console.log(`${groupArea} - ${groupStreet} - ${organizeName} ${showFlagLabel}`);
-	// }
 
 	// 未来几天日期
 	function recentlyDate(fetureDays = 6) {
@@ -168,30 +155,6 @@ const Crawler = (() => {
 		return ret;
 	}
 
-	// 获取排班详情
-	// function getScheduleFull({
-	// 	id,
- //  	groupArea,
- //  	groupStreet,
-	// }) {
-	// 	httpRequest(getScheduleFullForShow, {
-	// 		params: {
-	// 			baseOrganizeID: id,
-	// 			date: recentlyDate(1).join(',')
-	// 		}
-	// 	})
-	// 		.then(res => {
-	// 			if (res.ResCode === '100') {
-	// 				console.log(`${groupArea} - ${groupStreet} 有排班`);	
-	// 			} else {
-	// 				console.log(`${groupArea} - ${groupStreet} 排班异常`, res);
-	// 			}
-	// 		})
-	// 		.catch(err => {
-	// 			console.log('获取排班出现异常', err);
-	// 		});
-	// }
-
 	return {
 		run,
 	};
@@ -209,7 +172,7 @@ const Crawler = (() => {
 
 // =========================== 企业微信机器人 START ===========================
 const WechatRobot = (() => {
-  const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部 (个人测试用)
+	const ROBOT_KEY = 'd9323df8-930e-467b-9253-4db62f2dd1aa'; // 追梦赤子心 - 技术部 (个人测试用)
 
 	function sendMarkdownMsg(content) {
 		return httpRequest(`https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${ROBOT_KEY}`, {
@@ -236,12 +199,15 @@ const WechatRobot = (() => {
 
 
 // =========================== 程序入口 ===========================
-// 每15分钟爬一次
-schedule.scheduleJob('* */15 * * * *', function(fireDate) {
-	console.log(`========== 执行查询时间：${fireDate.toLocaleTimeString()} ==========`);
+// 每5分钟爬一次
+schedule.scheduleJob('0/5 * * * *', function(fireDate) {
+	console.log(`============== 执行查询时间：${fireDate.toLocaleTimeString()} ==============`.grey);
 	Crawler.run()
-		.then((res) => {
-			console.log(`============== 本次查询任务完成 ==============\n`, res);
+		.then(() => {
+			console.log(`============== 本次查询任务完成 ==============\n`.grey);
+		})
+		.finally(() => {
+			// process.exit(0);
 		});
 });
 
@@ -257,7 +223,6 @@ function notify(scheduleInfo) {
 		scheduleList,
 	} = scheduleInfo;
 	const content = scheduleList
-		// .filter(({ count }) => count > 0)
 		.map(({
 			beginTimeStr,
 			endTimeStr,
